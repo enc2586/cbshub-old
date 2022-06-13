@@ -41,19 +41,23 @@ import {
 Userfront.init(userfrontConfig.key);
 
 function App() {
-  if (Userfront.tokens.accessToken) {
+  const hasSetName = React.useRef(false);
+
+  const descriptionElementRef = React.useRef(null);
+  const [open, setOpen] = React.useState(false);
+
+  const [name, setName] = React.useState("");
+
+  if (Userfront.tokens.accessToken && !hasSetName.current) {
     const setUserName = async () => {
+      hasSetName.current = true;
       const userSnap = await getUserData();
       setName(userSnap.name);
     };
     setUserName();
   } else {
-    setName("");
+    hasSetName.current = false;
   }
-  const descriptionElementRef = React.useRef(null);
-  const [open, setOpen] = React.useState(false);
-
-  const [name, setName] = React.useState("");
 
   React.useEffect(() => {
     const init = async () => {
@@ -108,9 +112,12 @@ function App() {
                 </Nav.Link>
               </Nav>
               <Nav className="justify-content-end">
-                <Navbar.Text>
-                  안녕하세요, <b>{name}</b> 님!
-                </Navbar.Text>
+                {Userfront.tokens.accessToken ? (
+                  <Navbar.Text>
+                    안녕하세요, <b>{name}</b> 님!
+                  </Navbar.Text>
+                ) : null}
+
                 {!Userfront.tokens.accessToken ? (
                   <Nav.Link onClick={() => navigate("/login")}>
                     <b>로그인</b>
