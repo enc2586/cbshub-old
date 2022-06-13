@@ -1,38 +1,31 @@
-.App {
-  text-align: center;
+@font-face {
+  font-family: "sf-pro";
+  src: url("fonts/sf-pro-display-regular.woff2");
+}
+@font-face {
+  font-family: "sf-pro";
+  src: url("fonts/sf-pro-display-bold.woff2");
+  font-weight: bold;
 }
 
-.App-logo {
-  height: 40vmin;
-  pointer-events: none;
+@font-face {
+  font-family: "sd-gothic";
+  src: url("fonts/AppleSDGothicNeoR.woff2");
+}
+@font-face {
+  font-family: "sd-gothic";
+  src: url("fonts/AppleSDGothicNeoB.woff2");
+  font-weight: bold;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear;
-  }
+* {
+  font-family: "sf-pro", "sd-gothic";
 }
 
-.App-header {
-  background-color: #282c34;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  font-size: calc(10px + 2vmin);
-  color: white;
-}
-
-.App-link {
-  color: #61dafb;
-}
-
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-weight: bold;
 }
