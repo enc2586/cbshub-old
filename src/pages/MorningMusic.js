@@ -152,7 +152,7 @@ function MorningMusic() {
       });
 
       sortedDocs.sort((a, b) => {
-        return b.appliedOn.seconds - a.appliedOn.seconds;
+        return a.appliedOn.seconds - b.appliedOn.seconds;
       });
 
       setMorningMusicList(sortedDocs);

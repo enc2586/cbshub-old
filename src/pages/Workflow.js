@@ -66,6 +66,10 @@ function Workflow() {
       const workflowConfigRef = doc(db, "workflow", "Config");
 
       onSnapshot(workflowConfigRef, (doc) => {
+        // if(doc.data().status === "finished") {
+        //   init();
+        // }
+
         setBotStatus(doc.data().status);
         setTeachersList(Object.keys(doc.data().teachers));
         setClassesList(Object.keys(doc.data().classes));
@@ -241,6 +245,17 @@ function Workflow() {
       }
     });
 
+    const today = new Date();
+    var todayDay = today.getDay() - 1;
+
+    if (todayDay === -1) {
+      todayDay = 6;
+    }
+
+    console.log(todayDay);
+
+    console.log(today);
+
     const workflowData = {
       actCode: "ACT999",
       actContent: " ",
@@ -248,7 +263,11 @@ function Workflow() {
       conductingTeacherCode: teacherCode,
       dayOfWeek: dayOfWeekArray,
       periods: periodsArray,
-      status: botStatus === "ready" ? "ready" : "tomorrow",
+      status: dayOfWeekArray.includes(todayDay)
+        ? botStatus === "ready"
+          ? "ready"
+          : "tomorrow"
+        : "notToday",
       suspend: [],
     };
 
@@ -316,7 +335,10 @@ function Workflow() {
     var deleteObject = {};
     deleteObject[flowId] = deleteField();
     return (
-      <Box sx={{ borderRadius: 1, width: 350, p: 1 }} bgcolor="#ececec">
+      <Box
+        sx={{ borderRadius: 1, width: 350, p: 1.5, mb: 2 }}
+        bgcolor="#ececec"
+      >
         {data.status == "tomorrow" ? (
           <Alert severity="warning" sx={{ width: "100%", mb: 1 }}>
             내일부터 신청됩니다
@@ -340,6 +362,11 @@ function Workflow() {
         {data.status == "fail" ? (
           <Alert severity="error" sx={{ width: "100%", mb: 1 }}>
             1개 이상의 교시에 대한 신청이 실패했습니다
+          </Alert>
+        ) : null}
+        {data.status == "notToday" ? (
+          <Alert severity="info" sx={{ width: "100%", mb: 1 }}>
+            오늘은 신청 요일이 아닙니다
           </Alert>
         ) : null}
 
@@ -410,7 +437,7 @@ function Workflow() {
         ) : null}
         {workflowHasError === true ? (
           <Alert severity="error" sx={{ width: "100%", mb: 2 }}>
-            귀하의 WORKFLOW가 작동 중 오류가 발생했습니다
+            귀하의 WORKFLOW가 작동 중 오류를 발생시켰습니다
           </Alert>
         ) : null}
 
