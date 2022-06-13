@@ -267,7 +267,7 @@ const Home = () => {
               disableElevation
               onClick={() => navigate("/passwordReset")}
             >
-              비밀번호 분실
+              비밀번호 분실/변경
             </Button>
           </Stack>
         </Stack>

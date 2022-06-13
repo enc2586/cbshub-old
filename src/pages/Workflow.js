@@ -3,6 +3,7 @@ import { flushSync } from "react-dom";
 import {
   collection,
   deleteDoc,
+  deleteField,
   doc,
   getDoc,
   getDocs,
@@ -11,6 +12,7 @@ import {
   query,
   serverTimestamp,
   setDoc,
+  updateDoc,
 } from "firebase/firestore";
 
 import Userfront from "@userfront/core";
@@ -40,70 +42,129 @@ import {
   Typography,
   Checkbox,
   FormLabel,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions,
+  Alert,
 } from "@mui/material";
 
 import { DeleteForever } from "@mui/icons-material";
 
-import { getUserData } from "utils/getUserData";
+import { getUserData, userRef } from "utils/getUserData";
 import IOSSwitch from "utils/IOSSwitch";
-import { width } from "@mui/system";
 
 Userfront.init(UserfrontConfig.key);
 
 function Workflow() {
-  React.useEffect(() => {
-    const init = async () => {
-      const userSnap = await getUserData();
+  const init = async () => {
+    const userSnap = await getUserData();
 
-      if ("cbshselfCredential" in userSnap) {
-        // registered user
-        const workflowConfigRef = doc(db, "workflow", "Config");
-        const workflowConfigSnap = await getDoc(workflowConfigRef);
+    if ("cbshselfCredential" in userSnap) {
+      setHasRegisteredCredential(true);
+      const workflowConfigRef = doc(db, "workflow", "Config");
 
-        if (workflowConfigSnap.exists()) {
-          setTeachersList(Object.keys(workflowConfigSnap.data().teachers));
-          setClassesList(Object.keys(workflowConfigSnap.data().classes));
+      onSnapshot(workflowConfigRef, (doc) => {
+        setBotStatus(doc.data().status);
+        setTeachersList(Object.keys(doc.data().teachers));
+        setClassesList(Object.keys(doc.data().classes));
 
-          var tempTeachersList = {};
-          Object.keys(workflowConfigSnap.data().teachers).forEach(
-            (key, _index) => {
-              tempTeachersList[workflowConfigSnap.data().teachers[key]] = key;
-            }
-          );
+        nameMap.current = {
+          teachers: doc.data().teachers,
+          classes: doc.data().classes,
+        };
 
-          var tempClassesList = {};
-          Object.keys(workflowConfigSnap.data().classes).forEach(
-            (key, _index) => {
-              tempClassesList[workflowConfigSnap.data().classes[key]["id"]] =
-                key;
-            }
-          );
-        }
+        var tempTeachersList = {};
+        Object.keys(doc.data().teachers).forEach((key, _index) => {
+          tempTeachersList[doc.data().teachers[key]] = key;
+        });
 
-        codeMap.current = {
+        var tempClassesList = {};
+        Object.keys(doc.data().classes).forEach((key, _index) => {
+          tempClassesList[doc.data().classes[key]["id"]] = key;
+        });
+        setCodeMap({
           teachers: tempTeachersList,
           classes: tempClassesList,
-        };
-      }
-
-      onSnapshot(doc(db, "workflow", Userfront.user.userUuid), (doc) => {
-        if (doc.data() === undefined) {
-          setWorkflows([]);
-        } else {
-          var workflowsObject = doc.data();
-          delete workflowsObject.Config;
-
-          setWorkflows(workflowsObject);
-        }
+        });
       });
-    };
+    } else {
+      setHasRegisteredCredential(false);
+    }
+
+    onSnapshot(doc(db, "workflow", Userfront.user.userUuid), (doc) => {
+      setWorkflowHasError(false);
+      if (doc.data() === undefined) {
+        setWorkflows([]);
+      } else {
+        var workflowsObject = doc.data();
+        console.log(workflowsObject);
+        delete workflowsObject.Config;
+
+        setWorkflows(workflowsObject);
+
+        Object.keys(workflowsObject).forEach((key) => {
+          const item = workflowsObject[key];
+          if (item.status === "loginFailed" || item.status === "fail") {
+            setWorkflowHasError(true);
+          }
+        });
+      }
+    });
+  };
+
+  React.useEffect(() => {
     init();
   }, []);
+
+  const handleCredentialClose = async (saveCredential = false) => {
+    setOpenCredentials(false);
+
+    if (saveCredential === true) {
+      if (cred.id.length === 0 || cred.password.length === 0) {
+        toast.error("정보를 등록할 수 없습니다");
+        return;
+      }
+      const userRef = doc(db, "users", Userfront.user.userUuid);
+      await updateDoc(userRef, {
+        cbshselfCredential: {
+          id: cred.id,
+          password: cred.id,
+        },
+      });
+
+      toast.success("정보 등록에 성공했습니다");
+
+      setCred({
+        id: "",
+        password: "",
+      });
+
+      init();
+    }
+  };
+
+  const [hasRegisteredCredential, setHasRegisteredCredential] =
+    React.useState(true);
+
+  const [cred, setCred] = React.useState({
+    id: "",
+    password: "",
+  });
+  const [openCredentials, setOpenCredentials] = React.useState(false);
+  const [botStatus, setBotStatus] = React.useState("");
+
+  const [workflowHasError, setWorkflowHasError] = React.useState(false);
 
   const teacherName = React.useRef("");
   const className = React.useRef("");
 
-  const codeMap = React.useRef({});
+  const [codeMap, setCodeMap] = React.useState({
+    teachers: {},
+    classes: {},
+  });
+  const nameMap = React.useRef({});
 
   const [teachersList, setTeachersList] = React.useState([]);
   const [classesList, setClassesList] = React.useState([]);
@@ -115,16 +176,173 @@ function Workflow() {
     periods: [false, false, false, false, false, false, false, false],
   });
 
+  const addWorkflow = async () => {
+    var dayOfWeekBool = selected.dayOfWeek;
+    var periodsBool = selected.periods;
+    const weekend = isWeekend;
+
+    if (
+      (weekend
+        ? dayOfWeekBool[5] || dayOfWeekBool[6]
+        : dayOfWeekBool[0] ||
+          dayOfWeekBool[1] ||
+          dayOfWeekBool[2] ||
+          dayOfWeekBool[3] ||
+          dayOfWeekBool[4]) === false
+    ) {
+      toast.error("요일을 선택해주세요");
+      return;
+    }
+
+    if (
+      (periodsBool[0] ||
+        periodsBool[1] ||
+        periodsBool[2] ||
+        (weekend
+          ? periodsBool[3] ||
+            periodsBool[4] ||
+            periodsBool[5] ||
+            periodsBool[6] ||
+            periodsBool[7]
+          : false)) === false
+    ) {
+      toast.error("교시를 선택해주세요");
+      return;
+    }
+
+    if (teacherName.current == "") {
+      toast.error("선생님을 선택해주세요");
+      return;
+    }
+
+    if (className.current == "") {
+      toast.error("교실을 선택해주세요");
+      return;
+    }
+
+    const teacherCode = nameMap.current.teachers[teacherName.current];
+    const classCode = nameMap.current.classes[className.current].id;
+
+    var dayOfWeekArray = [];
+    var periodsArray = [];
+
+    dayOfWeekBool.forEach((value, index) => {
+      if (weekend ? index >= 5 : index < 5) {
+        if (value) {
+          dayOfWeekArray.push(index);
+        }
+      }
+    });
+    periodsBool.forEach((value, index) => {
+      if (weekend ? true : index <= 2) {
+        if (value) {
+          periodsArray.push(index + 1);
+        }
+      }
+    });
+
+    const workflowData = {
+      actCode: "ACT999",
+      actContent: " ",
+      classroomCode: classCode,
+      conductingTeacherCode: teacherCode,
+      dayOfWeek: dayOfWeekArray,
+      periods: periodsArray,
+      status: botStatus === "ready" ? "ready" : "tomorrow",
+      suspend: [],
+    };
+
+    const workflowRef = doc(db, "workflow", Userfront.user.userUuid);
+
+    const checkDoc = await getDoc(workflowRef);
+
+    var duplication = false;
+
+    if (checkDoc.exists()) {
+      const existingWorkflow = checkDoc.data();
+      Object.keys(existingWorkflow).forEach((key) => {
+        const item = existingWorkflow[key];
+
+        if (
+          item.dayOfWeek.filter((x) => dayOfWeekArray.includes(x)).length !== 0
+        ) {
+          if (
+            item.periods.filter((x) => periodsArray.includes(x)).length !== 0
+          ) {
+            toast.error("다른 예약과 시간이 겹쳐요");
+            duplication = true;
+            return;
+          }
+        }
+      });
+
+      if (duplication) {
+        return;
+      }
+
+      var newIndex = "0";
+      if (Object.keys(workflows).length !== 0) {
+        newIndex = Math.max(...Object.keys(workflows)) + 1;
+      }
+      var newWorkflow = {};
+      newWorkflow[newIndex] = workflowData;
+      updateDoc(workflowRef, newWorkflow);
+    } else {
+      var newWorkflow = {};
+      newWorkflow["0"] = workflowData;
+      setDoc(workflowRef, newWorkflow);
+    }
+  };
+
   function Reserve({ flowId, data }) {
-    const classroom = codeMap.current.classes[data.classroomCode];
-    const teacher = codeMap.current.teachers[data.conductingTeacherCode];
-    const dayOfWeek = "월";
-    const periods = "1";
+    const dayOfWeekConvert = (dayOfWeekArray) => {
+      const weeks = ["월", "화", "수", "목", "금", "토", "일"];
+      var daysInFlow = [];
+      console.log(dayOfWeekArray);
+
+      dayOfWeekArray.forEach((item) => {
+        daysInFlow.push(weeks[item]);
+      });
+
+      return daysInFlow.join(" / ");
+    };
+
+    console.log(codeMap.classes, data.classroomCode);
+    const classroom = codeMap.classes[data.classroomCode];
+    const teacher = codeMap.teachers[data.conductingTeacherCode];
+    const dayOfWeek = dayOfWeekConvert(data.dayOfWeek);
+    const periods = data.periods.join(" / ");
+
+    var deleteObject = {};
+    deleteObject[flowId] = deleteField();
     return (
-      <Box
-        sx={{ borderRadius: 1, width: 350, height: 175, p: 1 }}
-        bgcolor="#ececec"
-      >
+      <Box sx={{ borderRadius: 1, width: 350, p: 1 }} bgcolor="#ececec">
+        {data.status == "tomorrow" ? (
+          <Alert severity="warning" sx={{ width: "100%", mb: 1 }}>
+            내일부터 신청됩니다
+          </Alert>
+        ) : null}
+        {data.status == "ready" ? (
+          <Alert severity="info" sx={{ width: "100%", mb: 1 }}>
+            오늘 지정된 시간에 신청됩니다
+          </Alert>
+        ) : null}
+        {data.status == "success" ? (
+          <Alert severity="success" sx={{ width: "100%", mb: 1 }}>
+            신청에 성공했습니다
+          </Alert>
+        ) : null}
+        {data.status == "loginFailed" ? (
+          <Alert severity="error" sx={{ width: "100%", mb: 1 }}>
+            로그인 단계에서 오류가 발생했습니다
+          </Alert>
+        ) : null}
+        {data.status == "fail" ? (
+          <Alert severity="error" sx={{ width: "100%", mb: 1 }}>
+            1개 이상의 교시에 대한 신청이 실패했습니다
+          </Alert>
+        ) : null}
+
         <h4 className="notbold">
           <b>{classroom}</b> (으)로,
         </h4>
@@ -139,7 +357,14 @@ function Workflow() {
         </h6>
         <Button
           endIcon={<DeleteForever />}
-          // onClick={() => deleteReserve(currentId)}
+          variant="contained"
+          onClick={() => {
+            updateDoc(
+              doc(db, "workflow", Userfront.user.userUuid),
+              deleteObject
+            );
+            toast.success("성공적으로 삭제했습니다");
+          }}
           disableElevation
           // disabled={isDeleteButtonDisabled}
         >
@@ -153,14 +378,49 @@ function Workflow() {
     <div>
       <Grid container direction="column" alignItems="center">
         <h1>WORKFLOW</h1>
-        <span>자습 예약 신청 서비스</span>
-        <Grid container item direction="row" sx={{ m: 5 }}>
+        {hasRegisteredCredential ? null : (
+          // {false ? null : (
+          <Alert
+            severity="warning"
+            sx={{ width: "100%", mb: 2 }}
+            action={
+              <Button
+                color="inherit"
+                size="small"
+                onClick={() => setOpenCredentials(true)}
+              >
+                등록하기
+              </Button>
+            }
+          >
+            학생관리시스템 인증 정보가 등록되지 않아 사용할 수 없습니다.
+          </Alert>
+        )}
+        {botStatus === "running" ? (
+          <Alert severity="error" sx={{ width: "100%", mb: 2 }}>
+            현재 WORKFLOW가 작동 중입니다. 약 1분 소요되며, 그 동안 신규 예약을
+            할 수 없습니다.
+          </Alert>
+        ) : null}
+        {botStatus === "finished" ? (
+          <Alert severity="info" sx={{ width: "100%", mb: 2 }}>
+            오늘치 WORKFLOW는 이미 작동하였습니다. 신규 예약은 내일부터
+            신청됩니다.
+          </Alert>
+        ) : null}
+        {workflowHasError === true ? (
+          <Alert severity="error" sx={{ width: "100%", mb: 2 }}>
+            귀하의 WORKFLOW가 작동 중 오류가 발생했습니다
+          </Alert>
+        ) : null}
+
+        <Grid container item direction="row" justifyContent="center">
           <Grid
             container
             item
             direction="column"
             spacing={1}
-            sx={{ width: 350 }}
+            sx={{ width: 350, mb: 5 }}
           >
             <h2>예약하기</h2>
             <Autocomplete
@@ -178,7 +438,7 @@ function Workflow() {
               onChange={(event, value) => (className.current = value)}
               options={classesList}
               renderInput={(params) => (
-                <TextField {...params} label="교실" variant="filled" />
+                <TextField {...params} label="장소" variant="filled" />
               )}
             />
             <Grid container direction="row" alignItems="center" sx={{ m: 1 }}>
@@ -436,6 +696,9 @@ function Workflow() {
             </Grid>
             <Button
               // disabled={isDisabled}
+              onClick={() => {
+                addWorkflow();
+              }}
               variant="contained"
               size="small"
               sx={{ m: 1, width: 300 }}
@@ -449,8 +712,11 @@ function Workflow() {
               size="small"
               sx={{ ml: 1, mr: 1, width: 300 }}
               disableElevation
+              onClick={() => {
+                setOpenCredentials(true);
+              }}
             >
-              로그인 정보 수정하기
+              인증 정보 수정하기
             </Button>
           </Grid>
           <Grid
@@ -465,9 +731,56 @@ function Workflow() {
             {Object.keys(workflows).map(function (key, _index) {
               return <Reserve flowId={key} data={workflows[key]} key={key} />;
             })}
+            {Object.keys(workflows).length === 0 ? (
+              <span style={{ color: "#606069" }}>
+                아직 예약이 한 건도 없습니다
+              </span>
+            ) : null}
           </Grid>
         </Grid>
       </Grid>
+
+      <Dialog open={openCredentials} onClose={handleCredentialClose}>
+        <DialogTitle>인증 정보 추가/수정</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            공식 학생관리시스템(cbshself.kr)의 아이디와 패스워드를 입력해주세요.
+          </DialogContentText>
+          <TextField
+            autoFocus
+            margin="dense"
+            label="아이디"
+            onChange={(e) =>
+              setCred({
+                ...cred,
+                id: e.target.value,
+              })
+            }
+            value={cred.id}
+            fullWidth
+            variant="standard"
+          />
+          <TextField
+            autoFocus
+            margin="dense"
+            id="name"
+            label="패스워드"
+            onChange={(e) =>
+              setCred({
+                ...cred,
+                password: e.target.value,
+              })
+            }
+            value={cred.password}
+            fullWidth
+            variant="standard"
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCredentialClose}>취소</Button>
+          <Button onClick={() => handleCredentialClose(true)}>등록</Button>
+        </DialogActions>
+      </Dialog>
     </div>
   );
 }
