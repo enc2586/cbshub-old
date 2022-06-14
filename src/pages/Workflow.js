@@ -66,9 +66,14 @@ function Workflow() {
       const workflowConfigRef = doc(db, "workflow", "Config");
 
       onSnapshot(workflowConfigRef, (doc) => {
-        // if(doc.data().status === "finished") {
-        //   init();
-        // }
+        if (
+          doc.data().status === "initialize" ||
+          doc.data().status === "running"
+        ) {
+          setIsDisabled(true);
+        } else {
+          setIsDisabled(false);
+        }
 
         setBotStatus(doc.data().status);
         setTeachersList(Object.keys(doc.data().teachers));
@@ -99,6 +104,7 @@ function Workflow() {
 
     onSnapshot(doc(db, "workflow", Userfront.user.userUuid), (doc) => {
       setWorkflowHasError(false);
+      setNoTomorrow(false);
       if (doc.data() === undefined) {
         setWorkflows([]);
       } else {
@@ -112,6 +118,9 @@ function Workflow() {
           const item = workflowsObject[key];
           if (item.status === "loginFailed" || item.status === "fail") {
             setWorkflowHasError(true);
+          }
+          if (item.status === "tomorrow") {
+            setNoTomorrow(true);
           }
         });
       }
@@ -160,9 +169,12 @@ function Workflow() {
   const [botStatus, setBotStatus] = React.useState("");
 
   const [workflowHasError, setWorkflowHasError] = React.useState(false);
+  const [noTomorrow, setNoTomorrow] = React.useState(false);
 
   const teacherName = React.useRef("");
   const className = React.useRef("");
+
+  const [isDisabled, setIsDisabled] = React.useState(true);
 
   const [codeMap, setCodeMap] = React.useState({
     teachers: {},
@@ -385,6 +397,7 @@ function Workflow() {
         <Button
           endIcon={<DeleteForever />}
           variant="contained"
+          disabled={isDisabled}
           onClick={() => {
             updateDoc(
               doc(db, "workflow", Userfront.user.userUuid),
@@ -435,9 +448,19 @@ function Workflow() {
             신청됩니다.
           </Alert>
         ) : null}
+        {botStatus === "initialize" ? (
+          <Alert severity="info" sx={{ width: "100%", mb: 2 }}>
+            내일의 WORKFLOW를 위해 봇을 초기화하는 중입니다. 이 시간에 왜
+            접속하셨죠..?
+          </Alert>
+        ) : null}
         {workflowHasError === true ? (
           <Alert severity="error" sx={{ width: "100%", mb: 2 }}>
             귀하의 WORKFLOW가 작동 중 오류를 발생시켰습니다
+          </Alert>
+        ) : botStatus === "finished" && noTomorrow === true > 0 ? (
+          <Alert severity="success" sx={{ width: "100%", mb: 2 }}>
+            모든 WORKFLOW가 정상적으로 신청되었습니다.
           </Alert>
         ) : null}
 
@@ -722,7 +745,7 @@ function Workflow() {
               ) : null}
             </Grid>
             <Button
-              // disabled={isDisabled}
+              disabled={isDisabled}
               onClick={() => {
                 addWorkflow();
               }}
@@ -734,8 +757,7 @@ function Workflow() {
               예약
             </Button>
             <Button
-              // disabled={isDisabled}
-              // variant="contained"
+              disabled={isDisabled}
               size="small"
               sx={{ ml: 1, mr: 1, width: 300 }}
               disableElevation
