@@ -181,7 +181,7 @@ function App() {
           aria-describedby="scroll-dialog-description"
         >
           <DialogTitle id="scroll-dialog-title">
-            통합 마이그레이션 및 버그 수정 완료
+            통합 마이그레이션 및 버그 수정 완료 (ver. 0.9.1b)
           </DialogTitle>
           <DialogContent dividers>
             <DialogContentText
