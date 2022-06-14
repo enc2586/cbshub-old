@@ -143,7 +143,7 @@ function Workflow() {
       await updateDoc(userRef, {
         cbshselfCredential: {
           id: cred.id,
-          password: cred.id,
+          password: cred.password,
         },
       });
 

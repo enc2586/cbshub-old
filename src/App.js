@@ -203,7 +203,6 @@ function App() {
               <br />
               <br />
               <b>변경 사항:</b>
-              <br />- 마이그레이션: 웹 호스트: Heroku에서 Netlify로
               <br />- 마이그레이션: 데이터베이스: Firebase Realtime에서 Firebase
               Firestore로
               <br />- 마이그레이션: 자동화: Github Actions에서 WayScript로
