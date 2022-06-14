@@ -41,6 +41,12 @@ import {
 Userfront.init(userfrontConfig.key);
 
 function App() {
+  if (!window.location.href.split(":").includes("https")) {
+    var newlink = window.location.href.split(":").slice(1);
+    newlink.unshift("https");
+    window.location.href = newlink.join(":");
+  }
+
   const hasSetName = React.useRef(false);
 
   const descriptionElementRef = React.useRef(null);
