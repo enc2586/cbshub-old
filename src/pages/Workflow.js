@@ -392,7 +392,7 @@ function Workflow() {
           <b>{dayOfWeek}</b> 요일에,
         </h6>
         <h6 className="notbold">
-          <b>{periods}</b> 교시에 자습을 신청할께요.
+          <b>{periods}</b> 교시에 자습을 신청할게요.
         </h6>
         <Button
           endIcon={<DeleteForever />}
