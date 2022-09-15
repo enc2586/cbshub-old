@@ -147,7 +147,7 @@ function MorningMusicMgmt() {
   return (
     <div>
       <Grid container direction="column" alignItems="center">
-        <h1>Reville Management</h1>
+        <h1>신청곡 Admin Panel</h1>
         <span>음악을 클릭해 재생 완료 처리합니다</span>
         <FormControl>
           <RadioGroup

@@ -9,6 +9,7 @@ import {
   addDoc,
   increment,
   updateDoc,
+  getDocs,
 } from "firebase/firestore";
 import { db } from "utils/firebase";
 import { getUserData } from "utils/getUserData";
@@ -66,6 +67,19 @@ function MorningMusic() {
 
     changeDormitory(userSnap.dormitory);
     refreshMusicRequestsStatus(userSnap.reveilleRequests);
+    getUsersList();
+  };
+
+  const getUsersList = async () => {
+    const usersCollectionRef = collection(db, "users");
+    const usersQuerySnapshot = await getDocs(usersCollectionRef);
+
+    var usersTempList = {};
+    usersQuerySnapshot.forEach((doc) => {
+      usersTempList[doc.id] = doc.data().name;
+    });
+
+    setUsersList(usersTempList);
   };
 
   const refreshMusicRequestsStatus = async (current = undefined) => {
@@ -95,6 +109,8 @@ function MorningMusic() {
       return reveilleConfigData.data().maxRequests["default"];
     }
   };
+
+  const [usersList, setUsersList] = React.useState({});
 
   const [dormitory, setDormitory] = React.useState(null);
 
@@ -156,6 +172,7 @@ function MorningMusic() {
       });
 
       setMorningMusicList(sortedDocs);
+      // console.log(sortedDocs);
     });
   };
 
@@ -216,7 +233,7 @@ function MorningMusic() {
   return (
     <div>
       <Grid container direction="column" alignItems="center">
-        <h1>Reveille Requests</h1>
+        <h1>신청곡</h1>
         <FormControl>
           <RadioGroup
             row
@@ -329,7 +346,11 @@ function MorningMusic() {
                           console.log("clicked");
                         }}
                       >
-                        <ListItemText primary={item.title} />
+                        <ListItemText
+                          primary={item.title}
+                          secondary={"신청자: " + usersList[item.user]}
+                          sx={{ m: 0 }}
+                        />
                       </ListItemButton>
                     </ListItem>
                   ))
