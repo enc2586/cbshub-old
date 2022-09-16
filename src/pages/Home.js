@@ -92,19 +92,6 @@ function Home() {
       </Grid>
 
       <p>공지: {announcement}</p>
-
-      <Alert severity="error" sx={{ width: "100%", mb: 1 }}>
-        herokuapp이 올해 11월 중 서비스 제공을 중지함에 따라{" "}
-        <a onClick={() => window.open("https://cbshub.pages.dev", "_blank")}>
-          cbshub.pages.dev
-        </a>
-        로의 마이그레이션(이사)이 완료되었습니다.
-        <br />
-        북마크도 위 주소로 변경해 주세요.{" "}
-        <a onClick={() => window.open("https://cbshub.pages.dev", "_blank")}>
-          여기를 눌러 접속할 수 있습니다.
-        </a>
-      </Alert>
     </div>
   );
 }
