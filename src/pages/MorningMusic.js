@@ -10,6 +10,7 @@ import {
   increment,
   updateDoc,
   getDocs,
+  deleteDoc,
 } from "firebase/firestore";
 import { db } from "utils/firebase";
 import { getUserData } from "utils/getUserData";
@@ -17,7 +18,7 @@ import { getUserData } from "utils/getUserData";
 import Userfront from "@userfront/core";
 import UserfrontConfig from "auth/userfront.json";
 
-import { ArrowForward, Key } from "@mui/icons-material";
+import { ArrowForward, Key, Backspace, Filter } from "@mui/icons-material";
 
 import {
   FormLabel,
@@ -34,6 +35,7 @@ import {
   Paper,
   TextField,
   Button,
+  IconButton,
 } from "@mui/material";
 
 import { toast } from "react-toastify";
@@ -194,12 +196,52 @@ function MorningMusic() {
     await updateDoc(userRef, {
       reveilleRequests: increment(1),
     });
-
     musicRequests.current += 1;
+
     await setMusic({
       ...music,
       selected: "",
     });
+  };
+
+  const tryRemove = async (item) => {
+    if (item.user === Userfront.user.userUuid) {
+      if (filterWords(item.title) == true) {
+        const userRef = doc(db, "users", Userfront.user.userUuid);
+
+        await deleteDoc(doc(db, "reveille", dormitory, "queue", item.id));
+
+        await updateDoc(userRef, {
+          reveilleRequests: increment(-1),
+        });
+        musicRequests.current -= 1;
+
+        toast.info("삭제처리가 완료되었습니다.");
+      } else {
+        toast.error("금칙어가 포함되어 작업을 할 수 없음", { toastId: "ban1" });
+        toast.info(
+          <div>
+            신청할 땐 마음대로였겠지만
+            <br />
+            삭제할 땐 아니랍니다 ^^
+          </div>,
+          {
+            toastId: "ban2",
+          }
+        );
+      }
+    }
+  };
+
+  const filterWords = (title) => {
+    const filterList = ["무현", "문재인", "박근혜", "섹스"];
+
+    for (var index in filterList) {
+      if (title.includes(filterList[index])) {
+        return false;
+      }
+    }
+    return true;
   };
 
   // const getUserData = async (uid = Userfront.user.userUuid) => {
@@ -337,21 +379,32 @@ function MorningMusic() {
           <Grid container item spacing={1} direction="column" width={350}>
             <h2>조회</h2>
             <Paper style={{ height: 306, overflow: "auto" }}>
-              <List sx={{ maxWidth: 350 }}>
+              <List sx={{ maxWidth: 350 }} dense={true}>
                 {morningMusicList.length != 0 ? (
                   morningMusicList.map((item) => (
-                    <ListItem key={item.id} disablePadding>
-                      <ListItemButton
-                        onClick={() => {
-                          console.log("clicked");
-                        }}
-                      >
-                        <ListItemText
-                          primary={item.title}
-                          secondary={"신청자: " + usersList[item.user]}
-                          sx={{ m: 0 }}
-                        />
-                      </ListItemButton>
+                    <ListItem
+                      key={item.id}
+                      secondaryAction={
+                        item.user == Userfront.user.userUuid ? (
+                          <IconButton
+                            edge="end"
+                            aria-label="delete"
+                            onClick={() => tryRemove(item)}
+                          >
+                            <Backspace />
+                          </IconButton>
+                        ) : null
+                      }
+                    >
+                      <ListItemText
+                        primary={item.title}
+                        secondary={"신청자: " + usersList[item.user]}
+                        sx={{ m: 0 }}
+                      />
+                      {/* <ListItemButton
+                        onClick={() => tryRemove(item)}
+                        >
+                        </ListItemButton> */}
                     </ListItem>
                   ))
                 ) : (
