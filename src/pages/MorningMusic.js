@@ -18,7 +18,13 @@ import { getUserData } from "utils/getUserData";
 import Userfront from "@userfront/core";
 import UserfrontConfig from "auth/userfront.json";
 
-import { ArrowForward, Key, Backspace, Filter } from "@mui/icons-material";
+import {
+  ArrowForward,
+  Key,
+  Backspace,
+  Filter,
+  CopyAll,
+} from "@mui/icons-material";
 
 import {
   FormLabel,
@@ -207,14 +213,14 @@ function MorningMusic() {
   const tryRemove = async (item) => {
     if (item.user === Userfront.user.userUuid) {
       if (filterWords(item.title) == true) {
-        const userRef = doc(db, "users", Userfront.user.userUuid);
-
         await deleteDoc(doc(db, "reveille", dormitory, "queue", item.id));
 
         await updateDoc(userRef, {
           reveilleRequests: increment(-1),
         });
         musicRequests.current -= 1;
+
+        const userRef = doc(db, "users", Userfront.user.userUuid);
 
         toast.info("삭제처리가 완료되었습니다.");
       } else {
@@ -396,15 +402,23 @@ function MorningMusic() {
                         ) : null
                       }
                     >
-                      <ListItemText
-                        primary={item.title}
-                        secondary={"신청자: " + usersList[item.user]}
-                        sx={{ m: 0 }}
-                      />
-                      {/* <ListItemButton
+                      <ListItemButton
+                        sx={{ m: 0, p: 0 }}
+                        onClick={() => {
+                          navigator.clipboard.writeText(item.title);
+                          toast.info("제목을 복사했어요");
+                        }}
+                      >
+                        <ListItemText
+                          primary={item.title}
+                          secondary={"신청자: " + usersList[item.user]}
+                          sx={{ m: 0 }}
+                        />
+                        {/* <ListItemButton
                         onClick={() => tryRemove(item)}
                         >
                         </ListItemButton> */}
+                      </ListItemButton>
                     </ListItem>
                   ))
                 ) : (
@@ -423,18 +437,41 @@ function MorningMusic() {
         </Grid>
 
         {isReveilleAdmin ? (
-          <Button
-            variant="contained"
-            size="big"
-            sx={{ width: "50%", m: 5 }}
-            disableElevation
-            endIcon={<Key />}
-            onClick={() => {
-              navigate("/reveille/manage");
-            }}
-          >
-            관리자 메뉴로
-          </Button>
+          <Grid container direction="column" alignItems="center">
+            <Button
+              variant="contained"
+              size="big"
+              sx={{ width: "50%", mt: 5 }}
+              disableElevation
+              endIcon={<CopyAll />}
+              onClick={() => {
+                var t = "";
+                morningMusicList.forEach(function (item, index) {
+                  if (index <= 8) {
+                    t += item.title;
+                    t += "\n";
+                  }
+                });
+                navigator.clipboard.writeText(t);
+
+                toast.info("제목을 복사했어요");
+              }}
+            >
+              하루 분량 제목 복사
+            </Button>
+            <Button
+              variant="contained"
+              size="big"
+              sx={{ width: "50%", m: 2 }}
+              disableElevation
+              endIcon={<Key />}
+              onClick={() => {
+                navigate("/reveille/manage");
+              }}
+            >
+              관리자 메뉴로
+            </Button>
+          </Grid>
         ) : null}
       </Grid>
     </div>
